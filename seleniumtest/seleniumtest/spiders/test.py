@@ -16,17 +16,16 @@ import re
 class TestSpider(scrapy.Spider):
     name = 'test'
     allowed_domains = ['qixin.com']
-    # start_urls = ['http://www.qixin.com/company/9eda1ceb-4d50-4b02-9ef0-ad1437d24f75']
-    start_urls = ['http://www.qixin.com/company/518b125f-7f56-4ede-93d1-20e4748d1af8']  #茅台
+    start_urls = ['http://www.qixin.com/company/9eda1ceb-4d50-4b02-9ef0-ad1437d24f75']
     options = Options()
     driver = webdriver.Chrome()
     wait = WebDriverWait(driver, 10)
-    max_depth = 3
+    max_depth = 2
 
     def start_requests(self):
         self.driver.get('http://www.qixin.com/auth/login')
         login(self.driver)
-        url = 'http://www.qixin.com/company/518b125f-7f56-4ede-93d1-20e4748d1af8'
+        url = 'http://www.qixin.com/company/9eda1ceb-4d50-4b02-9ef0-ad1437d24f75'
         self.cookies = self.driver.get_cookies()
         # print(self.cookies)
         yield scrapy.Request(url, meta={'depth': 0}, cookies=self.cookies, dont_filter=True)
@@ -83,9 +82,6 @@ class TestSpider(scrapy.Spider):
                 s_item['to_key'] = company_key
             s_item['name'] = '投资'
             yield s_item
-        if response.meta['depth'] > self.max_depth:
-            yield company_item
-            return None
 
         time.sleep(1)
         list_href = response.xpath('//a[contains(text(),"上市信息")]/@href').extract_first()
@@ -154,7 +150,7 @@ class TestSpider(scrapy.Spider):
                 href = li.css('.col-2 h5 a::attr(href)').extract_first()
                 name = li.css('.col-2 h5 a::text').extract_first()
                 print(response.meta['depth'], '~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~')
-                # if response.meta['depth'] < self.max_depth:
+                if response.meta['depth'] < self.max_depth:
                     # # 进入被投资公司获取key
                     # print(name)
                     # investment_link = self.wait.until(
@@ -170,24 +166,24 @@ class TestSpider(scrapy.Spider):
                     #     investment_item['company_name'] = name
                     #     investment_item['href'] = href
                     #     yield investment_item
-                    # num = num + 1
+                    num = num + 1
                     # investment_key_list.append(investment_key)
-                yield scrapy.Request(response.urljoin(href),
-                                    meta={'depth': response.meta['depth'] + 1, 'i_key': company_key},
-                                    dont_filter=True, cookies=self.cookies)
-                # else:
-                #     investment_key = company_key + '_i' + str(num)
-                #     company_item = CompanyItem()
-                #     company_item['_id'] = investment_key
-                #     company_item['_key'] = investment_key
-                #     company_item['name'] = name
-                #     yield company_item
-                #     i_item = RelationItem()
-                #     i_item['from_key'] = company_key
-                #     i_item['to_key'] = investment_key
-                #     i_item['name'] = '投资'
-                #     yield i_item
-                #     num = num + 1
+                    yield scrapy.Request(response.urljoin(href),
+                                         meta={'depth': response.meta['depth'] + 1, 'i_key': company_key},
+                                         dont_filter=True, cookies=self.cookies)
+                else:
+                    investment_key = company_key + '_i' + str(num)
+                    company_item = CompanyItem()
+                    company_item['_id'] = investment_key
+                    company_item['_key'] = investment_key
+                    company_item['name'] = name
+                    yield company_item
+                    i_item = RelationItem()
+                    i_item['from_key'] = company_key
+                    i_item['to_key'] = investment_key
+                    i_item['name'] = '投资'
+                    yield i_item
+                    num = num + 1
                     # investment_key_list.append(investment_key)
 
             # 其他页
@@ -213,7 +209,7 @@ class TestSpider(scrapy.Spider):
                         href = li.find('.h5').children().attr('href')
                         name = li.find('.h5').text()
                         print(response.meta['depth'], '~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~')
-                        # if response.meta['depth'] < self.max_depth:
+                        if response.meta['depth'] < self.max_depth:
                             #     # 进入被投资公司获取key
                             #     investment_link = self.wait.until(
                             #         EC.element_to_be_clickable((By.XPATH, '//a[contains(@href, "{}")]'.format(href))))
@@ -230,22 +226,22 @@ class TestSpider(scrapy.Spider):
                             #     yield investment_item
                             #     num = num + 1
                             #     investment_key_list.append(investment_key)
-                        yield scrapy.Request(response.urljoin(href),
-                                            meta={'depth': response.meta['depth'] + 1, 'i_key': company_key},
-                                            dont_filter=True, cookies=self.cookies)
-                        # else:
-                        #     investment_key = company_key + '_i' + str(num)
-                        #     company_item = CompanyItem()
-                        #     company_item['_id'] = investment_key
-                        #     company_item['_key'] = investment_key
-                        #     company_item['name'] = name
-                        #     yield company_item
-                        #     i_item = RelationItem()
-                        #     i_item['from_key'] = company_key
-                        #     i_item['to_key'] = investment_key
-                        #     i_item['name'] = '投资'
-                        #     yield i_item
-                        #     num = num + 1
+                            yield scrapy.Request(response.urljoin(href),
+                                                 meta={'depth': response.meta['depth'] + 1, 'i_key': company_key},
+                                                 dont_filter=True, cookies=self.cookies)
+                        else:
+                            investment_key = company_key + '_i' + str(num)
+                            company_item = CompanyItem()
+                            company_item['_id'] = investment_key
+                            company_item['_key'] = investment_key
+                            company_item['name'] = name
+                            yield company_item
+                            i_item = RelationItem()
+                            i_item['from_key'] = company_key
+                            i_item['to_key'] = investment_key
+                            i_item['name'] = '投资'
+                            yield i_item
+                            num = num + 1
                             # investment_key_list.append(investment_key)
 
         except TimeoutException:
@@ -309,7 +305,6 @@ class TestSpider(scrapy.Spider):
                 man = PersonItem()
                 man['name'] = name
                 man['_key'] = shareholders_key
-                man['_id'] = shareholders_key
                 yield man
                 # yield shareholders_item
                 s_item = RelationItem()
@@ -319,7 +314,7 @@ class TestSpider(scrapy.Spider):
                 yield s_item
                 # shareholders_key_list.append(shareholders_key)
             else:
-                # if response.meta['depth'] < self.max_depth:
+                if response.meta['depth'] < self.max_depth:
                     # 公司
                     # link = self.wait.until(
                     #     EC.element_to_be_clickable((By.XPATH,
@@ -334,25 +329,25 @@ class TestSpider(scrapy.Spider):
                     #     yield shareholders_item
                     #     shareholders_key_list.append(shareholders_key)
                     # 爬取下一级公司
-                print('爬取下一级公司')
-                yield scrapy.Request(response.urljoin(href),
-                                    meta={'depth': response.meta['depth'] + 1, 's_key': company_key},
-                                    callback=self.parse, dont_filter=True, cookies=self.cookies)
-                # else:
-                #     # shareholders_item['_id'] = shareholders_key
-                #     # shareholders_item['_key'] = shareholders_key
-                #     # yield shareholders_item
-                #     # shareholders_key_list.append(shareholders_key)
-                #     company_item = CompanyItem()
-                #     company_item['_id'] = shareholders_key
-                #     company_item['_key'] = shareholders_key
-                #     company_item['name'] = name
-                #     yield company_item
-                #     s_item = RelationItem()
-                #     s_item['from_key'] = shareholders_key
-                #     s_item['to_key'] = company_key
-                #     s_item['name'] = '投资'
-                #     yield s_item
+                    print('爬取下一级公司')
+                    yield scrapy.Request(response.urljoin(href),
+                                         meta={'depth': response.meta['depth'] + 1, 's_key': company_key},
+                                         callback=self.parse, dont_filter=True, cookies=self.cookies)
+                else:
+                    # shareholders_item['_id'] = shareholders_key
+                    # shareholders_item['_key'] = shareholders_key
+                    # yield shareholders_item
+                    # shareholders_key_list.append(shareholders_key)
+                    company_item = CompanyItem()
+                    company_item['_id'] = shareholders_key
+                    company_item['_key'] = shareholders_key
+                    company_item['name'] = name
+                    yield company_item
+                    s_item = RelationItem()
+                    s_item['from_key'] = shareholders_key
+                    s_item['to_key'] = company_key
+                    s_item['name'] = '投资'
+                    yield s_item
 
         # # 存储公司-股东关系表
         # c_s_item = RelationItem()
